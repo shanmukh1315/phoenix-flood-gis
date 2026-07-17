@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phoenix Environmental &amp; Flood Risk GIS Analysis</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+    line-height: 1.55;
+    color: #1a1a1a;
+  }
+  h1 { font-size: 1.7rem; margin-bottom: 0.3rem; }
+  .subtitle { color: #555; margin-top: 0; margin-bottom: 1.8rem; }
+  .card {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 0.4rem; }
+  .card p { margin: 0 0 0.6rem; color: #444; font-size: 0.95rem; }
+  .card a {
+    display: inline-block;
+    font-weight: 600;
+    text-decoration: none;
+    color: #1a5fb4;
+  }
+  .card a:hover { text-decoration: underline; }
+  .stats {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin: 1.5rem 0 2rem;
+  }
+  .stat { text-align: left; }
+  .stat .n { font-size: 1.6rem; font-weight: 700; display: block; }
+  .stat .l { font-size: 0.82rem; color: #666; }
+  footer { margin-top: 2.5rem; font-size: 0.82rem; color: #777; }
+  footer a { color: #1a5fb4; }
+  img.preview {
+    width: 100%;
+    max-width: 320px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+  }
+</style>
+</head>
+<body>
+
+  <h1>Phoenix Environmental &amp; Flood Risk GIS Analysis</h1>
+  <p class="subtitle">
+    A screening-level spatial analysis of EPA-registered environmental
+    facilities in Phoenix, Arizona relative to FEMA-mapped flood hazard
+    zones. Built with Python, GeoPandas, and Folium from real public data.
+  </p>
+
+  <div class="stats">
+    <div class="stat"><span class="n">10,265</span><span class="l">facilities analyzed</span></div>
+    <div class="stat"><span class="n">4,195</span><span class="l">within 0.5 mi of a FEMA SFHA</span></div>
+    <div class="stat"><span class="n">40.9%</span><span class="l">of facilities flagged</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Interactive Map</h2>
+    <p>Explore facilities, flood hazard zones, and the Phoenix boundary in a Leaflet/Folium web map.</p>
+    <a href="maps/interactive_map.html">Open interactive map &rarr;</a>
+  </div>
+
+  <div class="card">
+    <h2>Static Map</h2>
+    <p>Print-quality static map with legend, north arrow, and data source note.</p>
+    <a href="maps/final_map.png">View static map (PNG) &rarr;</a><br>
+    <img class="preview" src="maps/final_map.png" alt="Static map preview">
+  </div>
+
+  <div class="card">
+    <h2>Technical Report (PDF)</h2>
+    <p>Project goal, methodology, CRS notes, key findings, limitations, and next steps.</p>
+    <a href="reports/gis_summary.pdf">Read the report &rarr;</a>
+  </div>
+
+  <div class="card">
+    <h2>Source Code &amp; Data Sources</h2>
+    <p>Full reproducible pipeline (fetch &rarr; clean &rarr; analyze &rarr; map &rarr; report) and documented data sources.</p>
+    <a href="README.md">Read the README &rarr;</a>
+  </div>
+
+  <footer>
+    Data sources: US Census Bureau TIGER/Line, EPA Facility Registry Service (FRS), FEMA National Flood Hazard Layer (NFHL).
+    See <a href="data_sources.md">data_sources.md</a> for full details, access dates, and limitations.
+  </footer>
+
+</body>
+</html>
