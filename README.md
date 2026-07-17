@@ -250,29 +250,5 @@ used Select by Location to validate facility buffers intersecting SFHA
 polygons, digitized sample review areas, and exported a print layout."*
 -- and only then, since at that point it will be true.
 
-## Optional: ArcGIS Online Web Map
-
-Also worth doing, since ArcGIS Online is frequently named explicitly in
-GIS Analyst job postings alongside QGIS:
-
-- [ ] 1. Sign in to [ArcGIS Online](https://www.arcgis.com) (a free
-      public account works).
-- [ ] 2. Upload simplified GeoJSON/GeoPackage exports of:
-      - Phoenix boundary
-      - FEMA SFHA polygons
-      - Analyzed facilities
-      as hosted feature layers (**Content > New Item > Your device**).
-- [ ] 3. Add all layers to a new web map.
-- [ ] 4. Style facilities by `intersects_flood_zone`, matching the color
-      scheme used in `maps/final_map.png`.
-- [ ] 5. Configure popups to show facility name, category, flood-risk
-      flag, and flood zone type.
-- [ ] 6. Save the web map and take a screenshot as
-      `screenshots/arcgis_online_webmap.png`.
-- [ ] 7. Add the public map link here once saved:
-      **ArcGIS Online Web Map:** _\<add your public map link here once created\>_
-
-Only once this is actually done should you list "ArcGIS Online
-fundamentals" as a skill -- and only "basic QGIS digitizing," not
-"scanning" or "georeferencing," unless you've actually georeferenced a
+ "georeferencing," unless you've actually georeferenced a
 scanned map. Do not list ArcGIS Pro unless you've actually used ArcGIS Pro.
