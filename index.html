@@ -2,98 +2,879 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Phoenix Environmental &amp; Flood Risk GIS Analysis</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phoenix Environmental &amp; Flood Risk GIS Analysis</title>
+<meta name="description" content="A reproducible geospatial analysis identifying EPA-registered facilities located within 0.5 miles of FEMA Special Flood Hazard Areas across Phoenix, Arizona. Built with Python, GeoPandas, and Folium.">
+<meta name="theme-color" content="#0f2440">
+
+<!-- Open Graph / social preview -->
+<meta property="og:title" content="Phoenix Environmental &amp; Flood Risk GIS Analysis">
+<meta property="og:description" content="10,265 EPA-registered facilities analyzed in Phoenix, AZ — 4,195 (40.9%) fall within 0.5 mile of a FEMA Special Flood Hazard Area. Reproducible Python/GeoPandas pipeline.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://shanmukh1315.github.io/phoenix-flood-gis/">
+<meta property="og:image" content="https://shanmukh1315.github.io/phoenix-flood-gis/maps/final_map.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f2440'/%3E%3Cpath d='M32 12c-9 0-16 7.5-16 16 0 12 16 24 16 24s16-12 16-24c0-8.5-7-16-16-16z' fill='%232f6fb0'/%3E%3Ccircle cx='32' cy='28' r='6' fill='white'/%3E%3C/svg%3E">
+
 <style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    max-width: 780px;
-    margin: 0 auto;
-    padding: 2.5rem 1.25rem 4rem;
-    line-height: 1.55;
-    color: #1a1a1a;
+  :root {
+    --navy: #0f2440;
+    --navy-light: #1d3a5f;
+    --flood-blue: #2f6fb0;
+    --flood-blue-dark: #1f5f99;
+    --risk-red: #c62828;
+    --risk-red-bg: #fdecea;
+    --safe-green: #2e7d32;
+    --safe-green-bg: #eaf5ea;
+    --bg: #eef2f6;
+    --card: #ffffff;
+    --border: #dde4ec;
+    --text: #1a2430;
+    --text-muted: #55636f;
+    --radius: 14px;
+    --shadow: 0 2px 10px rgba(15, 36, 64, 0.07);
+    --shadow-hover: 0 8px 24px rgba(15, 36, 64, 0.12);
+    --max-width: 1180px;
   }
-  h1 { font-size: 1.7rem; margin-bottom: 0.3rem; }
-  .subtitle { color: #555; margin-top: 0; margin-bottom: 1.8rem; }
-  .card {
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .wrap {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  a { color: var(--flood-blue-dark); }
+  a:focus-visible, button:focus-visible {
+    outline: 3px solid var(--flood-blue);
+    outline-offset: 2px;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -999px;
+    top: 0;
+    background: var(--navy);
+    color: white;
+    padding: 0.6rem 1rem;
+    z-index: 200;
+    border-radius: 0 0 8px 0;
+  }
+  .skip-link:focus { left: 0; }
+
+  h1, h2, h3 { color: var(--navy); font-weight: 700; line-height: 1.25; }
+  section { padding: 3.5rem 0; }
+  section h2 { font-size: 1.6rem; margin-bottom: 0.4rem; }
+  .section-kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--flood-blue-dark);
+    margin: 0 0 0.5rem;
+  }
+  .section-intro { color: var(--text-muted); max-width: 62ch; margin: 0 0 2rem; }
+
+  /* ---------- Nav ---------- */
+  header.site-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--navy);
+    color: white;
+  }
+  .nav-inner {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+  }
+  .brand { color: white; font-weight: 700; text-decoration: none; font-size: 0.98rem; white-space: nowrap; }
+  .brand span { color: #9fc1e6; font-weight: 500; }
+  nav.primary-links { display: flex; gap: 1.4rem; align-items: center; }
+  nav.primary-links a {
+    color: #d7e4f2;
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  nav.primary-links a:hover { color: white; }
+  nav.primary-links a.cta {
+    background: var(--flood-blue);
+    color: white;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+  }
+  nav.primary-links a.cta:hover { background: var(--flood-blue-dark); }
+  .nav-toggle {
+    display: none;
+    background: none;
+    border: 1px solid #3a5375;
+    color: white;
+    border-radius: 8px;
+    padding: 0.4rem 0.6rem;
+  }
+
+  @media (max-width: 900px) {
+    nav.primary-links {
+      display: none;
+      position: absolute;
+      top: 60px;
+      left: 0;
+      right: 0;
+      background: var(--navy);
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.9rem;
+      padding: 1.2rem 1.5rem 1.6rem;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+    nav.primary-links.open { display: flex; }
+    .nav-toggle { display: inline-block; }
+  }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 3.2rem 0 3rem; }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 3rem;
+    align-items: center;
+  }
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 2rem; }
+  }
+  .hero-kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--flood-blue-dark);
+    background: #dceafc;
+    display: inline-block;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
     margin-bottom: 1rem;
   }
-  .card h2 { font-size: 1.05rem; margin: 0 0 0.4rem; }
-  .card p { margin: 0 0 0.6rem; color: #444; font-size: 0.95rem; }
-  .card a {
-    display: inline-block;
-    font-weight: 600;
+  .hero h1 { font-size: 2.3rem; margin: 0 0 1rem; }
+  .hero p.lead { font-size: 1.08rem; color: var(--text-muted); margin: 0 0 1.7rem; max-width: 52ch; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 0.9rem; align-items: center; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.3rem;
+    border-radius: 9px;
+    font-weight: 700;
+    font-size: 0.94rem;
     text-decoration: none;
-    color: #1a5fb4;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    border: 2px solid transparent;
   }
-  .card a:hover { text-decoration: underline; }
-  .stats {
-    display: flex;
-    gap: 1.5rem;
-    flex-wrap: wrap;
-    margin: 1.5rem 0 2rem;
-  }
-  .stat { text-align: left; }
-  .stat .n { font-size: 1.6rem; font-weight: 700; display: block; }
-  .stat .l { font-size: 0.82rem; color: #666; }
-  footer { margin-top: 2.5rem; font-size: 0.82rem; color: #777; }
-  footer a { color: #1a5fb4; }
-  img.preview {
+  .btn:hover { transform: translateY(-1px); }
+  .btn-primary { background: var(--flood-blue); color: white; box-shadow: var(--shadow); }
+  .btn-primary:hover { background: var(--flood-blue-dark); box-shadow: var(--shadow-hover); }
+  .btn-secondary { background: white; color: var(--navy); border-color: var(--border); }
+  .btn-secondary:hover { border-color: var(--flood-blue); box-shadow: var(--shadow-hover); }
+  .btn-text { color: var(--flood-blue-dark); font-weight: 700; text-decoration: none; padding: 0.75rem 0.2rem; }
+  .btn-text:hover { text-decoration: underline; }
+
+  .hero-media { position: relative; }
+  .hero-media img {
     width: 100%;
-    max-width: 320px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    margin-top: 0.5rem;
+    height: 480px;
+    object-fit: cover;
+    object-position: 50% 15%;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-hover);
+    display: block;
+    border: 1px solid var(--border);
   }
+  .hero-media .location-tag {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    background: rgba(15, 36, 64, 0.88);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  @media (max-width: 900px) {
+    .hero-media img { height: 320px; }
+  }
+
+  /* ---------- Stats dashboard ---------- */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.4rem;
+  }
+  @media (max-width: 720px) {
+    .stats-grid { grid-template-columns: 1fr; }
+  }
+  .stat-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.6rem 1.5rem;
+    border-top: 4px solid var(--flood-blue);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .stat-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+  .stat-card.is-highlight { border-top-color: var(--risk-red); }
+  .stat-icon {
+    width: 38px; height: 38px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #e7f0fa; color: var(--flood-blue-dark);
+    border-radius: 9px; margin-bottom: 0.9rem;
+  }
+  .stat-card.is-highlight .stat-icon { background: var(--risk-red-bg); color: var(--risk-red); }
+  .stat-number {
+    font-size: 2.1rem;
+    font-weight: 800;
+    color: var(--navy);
+    display: block;
+    line-height: 1.1;
+  }
+  .stat-card.is-highlight .stat-number { color: var(--risk-red); font-size: 2.5rem; }
+  .stat-label {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+    display: block;
+  }
+
+  /* ---------- Map embed ---------- */
+  .map-panel {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.2rem;
+  }
+  .map-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-bottom: 0.9rem;
+  }
+  .map-instructions { color: var(--text-muted); font-size: 0.92rem; margin: 0; }
+  .map-frame-wrap {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #f4f7fa;
+  }
+  .map-frame-wrap iframe {
+    width: 100%;
+    height: 650px;
+    border: 0;
+    display: block;
+  }
+  @media (max-width: 720px) {
+    .map-frame-wrap iframe { height: 420px; }
+  }
+  .map-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    background: #f4f7fa;
+    pointer-events: none;
+  }
+
+  /* ---------- Why it matters ---------- */
+  .why-box {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.8rem 2rem;
+    border-left: 5px solid var(--flood-blue);
+  }
+
+  /* ---------- Methodology ---------- */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.6rem;
+  }
+  .flow-step {
+    background: var(--card);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 0.9rem 1.1rem;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--navy);
+    flex: 1 1 180px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+  .flow-arrow {
+    color: var(--flood-blue);
+    font-weight: 700;
+    font-size: 1.2rem;
+    flex: 0 0 auto;
+  }
+  @media (max-width: 720px) {
+    .flow { flex-direction: column; align-items: stretch; }
+    .flow-arrow { transform: rotate(90deg); align-self: center; }
+  }
+  .tech-note {
+    background: #eaf1fb;
+    border-left: 4px solid var(--flood-blue-dark);
+    border-radius: 8px;
+    padding: 0.9rem 1.2rem;
+    font-size: 0.92rem;
+    color: var(--navy-light);
+  }
+
+  /* ---------- Pipeline ---------- */
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.6rem;
+  }
+  @media (max-width: 980px) {
+    .pipeline-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .pipeline-grid { grid-template-columns: 1fr; }
+  }
+  .pipeline-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.2rem 1.1rem;
+    text-align: left;
+  }
+  .pipeline-step-no {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--flood-blue);
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 800;
+    margin-bottom: 0.6rem;
+  }
+  .pipeline-card h3 { font-size: 0.98rem; margin: 0 0 0.3rem; }
+  .pipeline-card p { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
+  .code-block {
+    background: var(--navy);
+    color: #d7e4f2;
+    border-radius: 10px;
+    padding: 1rem 1.3rem;
+    font-family: "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 0.92rem;
+    overflow-x: auto;
+  }
+  .code-block .prompt { color: #7fb1e6; }
+  .pipeline-note { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.8rem; }
+
+  /* ---------- Static map + finding ---------- */
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+    align-items: center;
+  }
+  @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+  .split img {
+    width: 100%;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .finding-callout {
+    background: var(--risk-red-bg);
+    border-left: 5px solid var(--risk-red);
+    border-radius: 10px;
+    padding: 1.1rem 1.3rem;
+    margin: 1.2rem 0;
+  }
+  .finding-callout .n { color: var(--risk-red); font-weight: 800; font-size: 1.3rem; }
+
+  /* ---------- Defensibility ---------- */
+  .defense-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.2rem;
+  }
+  @media (max-width: 720px) { .defense-grid { grid-template-columns: 1fr; } }
+  .defense-item {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.2rem 1.3rem;
+  }
+  .defense-item h3 { font-size: 0.98rem; margin: 0 0 0.4rem; }
+  .defense-item p { font-size: 0.9rem; color: var(--text-muted); margin: 0; }
+
+  /* ---------- Badges ---------- */
+  .badge-row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem; }
+  .badge {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.45rem 0.95rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  .badge.status {
+    background: repeating-linear-gradient(45deg, #fff, #fff 6px, #fdf3e0 6px, #fdf3e0 12px);
+    border: 1.5px dashed #c98a1c;
+    color: #8a5a10;
+  }
+
+  /* ---------- Limitations ---------- */
+  .limitations-panel {
+    background: #fff8ec;
+    border: 1px solid #f0dcb0;
+    border-left: 5px solid #c98a1c;
+    border-radius: var(--radius);
+    padding: 1.6rem 1.8rem;
+  }
+  .limitations-panel h2 { margin-top: 0; }
+
+  /* ---------- Resources ---------- */
+  .resource-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.3rem;
+  }
+  @media (max-width: 900px) { .resource-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 620px) { .resource-grid { grid-template-columns: 1fr; } }
+  .resource-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.4rem 1.4rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .resource-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+  .resource-icon {
+    width: 36px; height: 36px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #e7f0fa; color: var(--flood-blue-dark);
+    border-radius: 9px; margin-bottom: 0.8rem;
+  }
+  .resource-card h3 { font-size: 1rem; margin: 0 0 0.4rem; }
+  .resource-card p { font-size: 0.88rem; color: var(--text-muted); margin: 0 0 1rem; flex-grow: 1; }
+  .resource-card .btn { align-self: flex-start; }
+
+  /* ---------- Footer ---------- */
+  footer.site-footer {
+    background: var(--navy);
+    color: #c7d5e5;
+    padding: 2.6rem 0;
+    margin-top: 2rem;
+  }
+  footer.site-footer h2 { color: white; font-size: 1.1rem; margin: 0 0 0.2rem; }
+  footer.site-footer .role { color: #9fc1e6; font-size: 0.9rem; margin: 0 0 1.1rem; }
+  .footer-links { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-bottom: 1.4rem; }
+  .footer-links a { color: #d7e4f2; text-decoration: none; font-weight: 600; font-size: 0.92rem; }
+  .footer-links a:hover { color: white; text-decoration: underline; }
+  .footer-fine { font-size: 0.8rem; color: #7d93ab; border-top: 1px solid #24405e; padding-top: 1.2rem; }
+  .footer-fine a { color: #9fc1e6; }
+
+  svg.icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 </style>
 </head>
 <body>
 
-  <h1>Phoenix Environmental &amp; Flood Risk GIS Analysis</h1>
-  <p class="subtitle">
-    A screening-level spatial analysis of EPA-registered environmental
-    facilities in Phoenix, Arizona relative to FEMA-mapped flood hazard
-    zones. Built with Python, GeoPandas, and Folium from real public data.
-  </p>
+<a class="skip-link" href="#main">Skip to main content</a>
 
-  <div class="stats">
-    <div class="stat"><span class="n">10,265</span><span class="l">facilities analyzed</span></div>
-    <div class="stat"><span class="n">4,195</span><span class="l">within 0.5 mi of a FEMA SFHA</span></div>
-    <div class="stat"><span class="n">40.9%</span><span class="l">of facilities flagged</span></div>
+<header class="site-nav">
+  <div class="nav-inner">
+    <a class="brand" href="#overview">Shanmukha Challa <span>| GIS Portfolio</span></a>
+    <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="primaryNav" aria-label="Toggle navigation menu">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <nav class="primary-links" id="primaryNav">
+      <a href="#overview">Overview</a>
+      <a href="#results">Results</a>
+      <a href="#map">Interactive Map</a>
+      <a href="#methodology">Methodology</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="reports/gis_summary.pdf" target="_blank" rel="noopener">Report</a>
+      <a class="cta" href="https://github.com/shanmukh1315/phoenix-flood-gis" target="_blank" rel="noopener">GitHub</a>
+    </nav>
   </div>
+</header>
 
-  <div class="card">
-    <h2>Interactive Map</h2>
-    <p>Explore facilities, flood hazard zones, and the Phoenix boundary in a Leaflet/Folium web map.</p>
-    <a href="maps/interactive_map.html">Open interactive map &rarr;</a>
+<main id="main">
+
+  <!-- Hero -->
+  <section class="hero" id="overview">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="hero-kicker">Geospatial Risk Analysis</span>
+        <h1>Phoenix Environmental &amp; Flood Risk GIS Analysis</h1>
+        <p class="lead">A reproducible geospatial analysis identifying EPA-registered facilities located within 0.5 miles of FEMA Special Flood Hazard Areas across Phoenix, Arizona.</p>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="#map">
+            <svg class="icon" viewBox="0 0 24 24" width="18" height="18"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 4v13"/><path d="M15 7v13"/></svg>
+            Explore Interactive Map
+          </a>
+          <a class="btn btn-secondary" href="https://github.com/shanmukh1315/phoenix-flood-gis" target="_blank" rel="noopener">
+            <svg class="icon" viewBox="0 0 24 24" width="18" height="18"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.36 1.09 2.94.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.4 9.4 0 0 1 5 0c1.91-1.3 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg>
+            View GitHub
+          </a>
+        </div>
+        <p style="margin-top:1rem;">
+          <a class="btn-text" href="reports/gis_summary.pdf" target="_blank" rel="noopener">Read Technical Report &rarr;</a>
+        </p>
+      </div>
+      <div class="hero-media">
+        <img src="maps/final_map.png" alt="Static map of Phoenix showing EPA facilities and FEMA flood hazard zones, color-coded by flood-risk flag">
+        <span class="location-tag">
+          <svg class="icon" viewBox="0 0 24 24" width="14" height="14" style="stroke:white"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Phoenix, Arizona
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section id="results">
+    <div class="wrap">
+      <p class="section-kicker">Key Results</p>
+      <h2>What the analysis found</h2>
+      <p class="section-intro">Every number below is computed live by <code>analysis.py</code> and written to <code>data/processed/summary_statistics.csv</code> — nothing here is hardcoded or estimated.</p>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-icon"><svg class="icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3"/></svg></span>
+          <span class="stat-number" data-metric="total_facilities_analyzed">10,265</span>
+          <span class="stat-label">Facilities analyzed</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span class="stat-number" data-metric="facilities_within_0.5mi_of_sfha">4,195</span>
+          <span class="stat-label">Facilities within 0.5 mi of a FEMA SFHA</span>
+        </div>
+        <div class="stat-card is-highlight">
+          <span class="stat-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+          <span class="stat-number" data-metric="pct_facilities_within_0.5mi_of_sfha">40.9%</span>
+          <span class="stat-label">Of facilities flagged for review</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive map -->
+  <section id="map">
+    <div class="wrap">
+      <p class="section-kicker">Explore</p>
+      <h2>Interactive Map</h2>
+      <p class="section-intro">Phoenix boundary, FEMA flood hazard zones, and every analyzed facility — clustered, color-coded, and clickable.</p>
+      <div class="map-panel">
+        <div class="map-panel-head">
+          <p class="map-instructions">Zoom, toggle layers, and click facilities to inspect attributes.</p>
+          <a class="btn btn-secondary" href="maps/interactive_map.html" target="_blank" rel="noopener">
+            <svg class="icon" viewBox="0 0 24 24" width="16" height="16"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+            Open full-screen map
+          </a>
+        </div>
+        <div class="map-frame-wrap">
+          <div class="map-loading" id="mapLoading">Loading interactive map&hellip;</div>
+          <iframe
+            src="maps/interactive_map.html"
+            title="Interactive Phoenix Environmental &amp; Flood Risk Map"
+            loading="lazy"
+            onload="document.getElementById('mapLoading').style.display='none'">
+          </iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why it matters -->
+  <section id="why">
+    <div class="wrap">
+      <p class="section-kicker">Why This Analysis Matters</p>
+      <h2>A screening tool, not a flood model</h2>
+      <div class="why-box">
+        <p style="margin:0;">Flooding can mobilize contaminants stored or handled at industrial and regulated facilities — hazardous waste, wastewater discharge, chemical storage — turning a flood event into a secondary environmental release. This analysis provides a <strong>screening-level method</strong> to identify facilities that may warrant further flood-risk review, emergency planning, or environmental assessment before a more detailed engineering study. It is intentionally <strong>not</strong> a hydraulic flood model.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Methodology -->
+  <section id="methodology">
+    <div class="wrap">
+      <p class="section-kicker">Methodology</p>
+      <h2>How the spatial analysis works</h2>
+      <p class="section-intro">Four steps turn raw facility points and flood polygons into a flagged result set.</p>
+      <div class="flow">
+        <div class="flow-step">EPA facility point</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">Reproject to EPSG:2223</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">Create 0.5-mile buffer</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">Intersect with FEMA SFHA</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-step">Facility flagged for review</div>
+      </div>
+      <p class="tech-note">Distance-based analysis was performed in a projected coordinate reference system (EPSG:2223, NAD83 / Arizona Central State Plane, US feet) rather than latitude/longitude degrees, so the 0.5-mile buffer represents a true, consistent distance everywhere in the study area.</p>
+    </div>
+  </section>
+
+  <!-- Pipeline -->
+  <section id="pipeline">
+    <div class="wrap">
+      <p class="section-kicker">Reproducibility</p>
+      <h2>One command regenerates everything</h2>
+      <div class="pipeline-grid">
+        <div class="pipeline-card">
+          <span class="pipeline-step-no">1</span>
+          <h3>Fetch</h3>
+          <p>Census, EPA, and FEMA public data downloaded programmatically.</p>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-step-no">2</span>
+          <h3>Clean</h3>
+          <p>Validate coordinates, repair geometries, filter to Phoenix.</p>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-step-no">3</span>
+          <h3>Analyze</h3>
+          <p>Reproject, buffer 0.5 mi, and spatially join to FEMA SFHA zones.</p>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-step-no">4</span>
+          <h3>Visualize</h3>
+          <p>Static print map and interactive Folium/Leaflet web map.</p>
+        </div>
+        <div class="pipeline-card">
+          <span class="pipeline-step-no">5</span>
+          <h3>Report</h3>
+          <p>A two-page PDF technical report generated from the analysis output.</p>
+        </div>
+      </div>
+      <div class="code-block"><span class="prompt">$</span> python run_pipeline.py</div>
+      <p class="pipeline-note">One command regenerates the cleaned layers, analysis outputs, maps, statistics, and technical report.</p>
+    </div>
+  </section>
+
+  <!-- Static map + key finding -->
+  <section id="static-map">
+    <div class="wrap split">
+      <div>
+        <img src="maps/final_map.png" alt="Full static map of Phoenix with EPA facilities and FEMA flood hazard zones">
+      </div>
+      <div>
+        <p class="section-kicker">Static Map &amp; Key Finding</p>
+        <h2>Print-quality output</h2>
+        <p class="section-intro" style="margin-bottom:1rem;">Legend, north arrow, and data source note included — suitable for a report appendix or print layout.</p>
+        <div class="finding-callout">
+          <span class="n">4,195 facilities (40.9%)</span> fall within 0.5 mile of a FEMA Special Flood Hazard Area.
+        </div>
+        <p style="color:var(--text-muted); font-size:0.92rem;">The largest facility categories are "Other / State-Registered Facility" and "Hazardous Waste (RCRA)" — these two categories also dominate the facilities flagged near an SFHA.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Technical defensibility -->
+  <section id="defensibility">
+    <div class="wrap">
+      <p class="section-kicker">Technical Decisions</p>
+      <h2>Why this holds up under questions</h2>
+      <div class="defense-grid">
+        <div class="defense-item">
+          <h3>Why a projected CRS for buffering</h3>
+          <p>EPSG:4326 stores coordinates in decimal degrees, not a linear unit — a "0.5" buffer there would mean 0.5 degrees, not 0.5 miles, and would vary by latitude.</p>
+        </div>
+        <div class="defense-item">
+          <h3>Why EPSG:2223</h3>
+          <p>NAD83 / Arizona Central State Plane (US feet) is a projected CRS centered on the Phoenix metro area, giving accurate, consistent distances across the study area.</p>
+        </div>
+        <div class="defense-item">
+          <h3>Why the EPA bulk CSV, not the REST API</h3>
+          <p>The FRS REST API's spatial query rejects any request wide enough to cover Phoenix ("process limit" error). EPA's own documented bulk CSV download was used instead — see <a href="https://github.com/shanmukh1315/phoenix-flood-gis/blob/main/data_sources.md">data_sources.md</a>.</p>
+        </div>
+        <div class="defense-item">
+          <h3>Every number traces back to a script</h3>
+          <p>Nothing is hardcoded. Every figure on this page and in the PDF report is read from <code>summary_statistics.csv</code>, generated by <code>analysis.py</code>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech badges -->
+  <section id="tools">
+    <div class="wrap">
+      <p class="section-kicker">Tools &amp; Technologies</p>
+      <h2>Stack</h2>
+      <div class="badge-row">
+        <span class="badge">Python</span>
+        <span class="badge">GeoPandas</span>
+        <span class="badge">Shapely</span>
+        <span class="badge">PyProj</span>
+        <span class="badge">Matplotlib</span>
+        <span class="badge">Folium</span>
+        <span class="badge">Leaflet</span>
+        <span class="badge">ReportLab</span>
+        <span class="badge">GeoPackage</span>
+        <span class="badge">GitHub Pages</span>
+      </div>
+      <div class="badge-row">
+        <span class="badge status">QGIS verification &mdash; in progress</span>
+        <span class="badge status">ArcGIS Online map &mdash; planned</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Limitations -->
+  <section id="limitations">
+    <div class="wrap">
+      <div class="limitations-panel">
+        <h2>Limitations</h2>
+        <p style="margin-bottom:0;">This is a <strong>screening-level proximity analysis</strong>. A facility located near a FEMA Special Flood Hazard Area is not necessarily expected to flood. Elevation, drainage infrastructure, levees, site conditions, and hydraulic behavior were not modeled. FEMA flood maps are periodically revised and may not reflect current conditions.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Resources -->
+  <section id="resources">
+    <div class="wrap">
+      <p class="section-kicker">Project Resources</p>
+      <h2>Explore the outputs</h2>
+      <div class="resource-grid">
+        <div class="resource-card">
+          <span class="resource-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+          <h3>Technical Report</h3>
+          <p>Two-page PDF covering goal, methodology, CRS notes, findings, and limitations.</p>
+          <a class="btn btn-secondary" href="reports/gis_summary.pdf" target="_blank" rel="noopener">Open PDF &rarr;</a>
+        </div>
+        <div class="resource-card">
+          <span class="resource-icon"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></span>
+          <h3>Static Print Map</h3>
+          <p>Print-quality PNG with legend, north arrow, and data source note.</p>
+          <a class="btn btn-secondary" href="maps/final_map.png" target="_blank" rel="noopener">View PNG &rarr;</a>
+        </div>
+        <div class="resource-card">
+          <span class="resource-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.36 1.09 2.94.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.4 9.4 0 0 1 5 0c1.91-1.3 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg></span>
+          <h3>GitHub Source Code</h3>
+          <p>Full reproducible pipeline, cleaned GeoPackage layers, and documented data sources.</p>
+          <a class="btn btn-secondary" href="https://github.com/shanmukh1315/phoenix-flood-gis" target="_blank" rel="noopener">View Repository &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer" id="contact">
+  <div class="wrap">
+    <h2>Shanmukha Srinivas Challa</h2>
+    <p class="role">GIS &amp; Data Science Portfolio</p>
+    <div class="footer-links">
+      <a href="https://github.com/shanmukh1315" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/shanmukh1315/phoenix-flood-gis" target="_blank" rel="noopener">This Project</a>
+      <a href="reports/gis_summary.pdf" target="_blank" rel="noopener">Technical Report</a>
+      <!-- Add LinkedIn / personal portfolio / email links here once you'd like them public -->
+    </div>
+    <p class="footer-fine">
+      Data sources: US Census Bureau TIGER/Line, EPA Facility Registry Service (FRS), FEMA National Flood Hazard Layer (NFHL).
+      See <a href="https://github.com/shanmukh1315/phoenix-flood-gis/blob/main/data_sources.md">data_sources.md</a> for full details, access dates, and limitations.
+    </p>
   </div>
+</footer>
 
-  <div class="card">
-    <h2>Static Map</h2>
-    <p>Print-quality static map with legend, north arrow, and data source note.</p>
-    <a href="maps/final_map.png">View static map (PNG) &rarr;</a><br>
-    <img class="preview" src="maps/final_map.png" alt="Static map preview">
-  </div>
+<script>
+  // Mobile nav toggle
+  (function () {
+    var toggle = document.getElementById('navToggle');
+    var nav = document.getElementById('primaryNav');
+    toggle.addEventListener('click', function () {
+      var isOpen = nav.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+    nav.querySelectorAll('a').forEach(function (link) {
+      link.addEventListener('click', function () {
+        nav.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+      });
+    });
+  })();
 
-  <div class="card">
-    <h2>Technical Report (PDF)</h2>
-    <p>Project goal, methodology, CRS notes, key findings, limitations, and next steps.</p>
-    <a href="reports/gis_summary.pdf">Read the report &rarr;</a>
-  </div>
+  // Pull live numbers from the single source of truth (summary_statistics.csv)
+  // so the same figures never have to be hand-edited in multiple places.
+  // Falls back to the static text already in the HTML if the fetch fails
+  // (e.g. when viewing the file locally via file:// instead of https://).
+  (function () {
+    fetch('data/processed/summary_statistics.csv')
+      .then(function (res) { return res.ok ? res.text() : Promise.reject(); })
+      .then(function (csvText) {
+        var metrics = {};
+        csvText.trim().split('\n').slice(1).forEach(function (line) {
+          var idx = line.lastIndexOf(',');
+          if (idx === -1) return;
+          var key = line.slice(0, idx).replace(/^"|"$/g, '');
+          var value = parseFloat(line.slice(idx + 1));
+          metrics[key] = value;
+        });
 
-  <div class="card">
-    <h2>Source Code &amp; Data Sources</h2>
-    <p>Full reproducible pipeline (fetch &rarr; clean &rarr; analyze &rarr; map &rarr; report) and documented data sources.</p>
-    <a href="https://github.com/shanmukh1315/phoenix-flood-gis#readme">Read the README &rarr;</a>
-  </div>
+        var total = metrics['total_facilities_analyzed'];
+        var nearSfha = metrics['facilities_within_0.5mi_of_sfha'];
+        var pct = metrics['pct_facilities_within_0.5mi_of_sfha'];
 
-  <footer>
-    Data sources: US Census Bureau TIGER/Line, EPA Facility Registry Service (FRS), FEMA National Flood Hazard Layer (NFHL).
-    See <a href="https://github.com/shanmukh1315/phoenix-flood-gis/blob/main/data_sources.md">data_sources.md</a> for full details, access dates, and limitations.
-  </footer>
+        if (total) setText('total_facilities_analyzed', total.toLocaleString());
+        if (nearSfha) setText('facilities_within_0.5mi_of_sfha', nearSfha.toLocaleString());
+        if (pct) setText('pct_facilities_within_0.5mi_of_sfha', pct.toFixed(1) + '%');
+      })
+      .catch(function () { /* keep static fallback text already in the HTML */ });
+
+    function setText(metricName, text) {
+      document.querySelectorAll('[data-metric="' + metricName + '"]').forEach(function (el) {
+        el.textContent = text;
+      });
+    }
+  })();
+</script>
 
 </body>
 </html>
