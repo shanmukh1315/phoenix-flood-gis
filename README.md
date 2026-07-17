@@ -228,22 +228,3 @@ as an honest checklist rather than claimed as complete:
 Only claim "basic QGIS digitizing" as a skill once step 8 is actually
 done, and never claim "georeferencing" unless a scanned map was actually
 georeferenced. Do not list ArcGIS Pro unless ArcGIS Pro was actually used.
-
-## Optional: ArcGIS Online Web Map
-
-Not yet done. Worth doing since ArcGIS Online is frequently named
-explicitly in GIS Analyst job postings alongside QGIS:
-
-- [ ] 1. Sign in to [ArcGIS Online](https://www.arcgis.com) (a free
-      public account works).
-- [ ] 2. Upload simplified GeoJSON/GeoPackage exports of the Phoenix
-      boundary, FEMA SFHA polygons, and analyzed facilities as hosted
-      feature layers.
-- [ ] 3. Add all layers to a new web map, style facilities by
-      `intersects_flood_zone`, and configure popups to show facility
-      name, category, flood-risk flag, and flood zone type.
-- [ ] 4. Save the web map, screenshot it as
-      `screenshots/arcgis_online_webmap.png`, and add the public map link
-      here: **ArcGIS Online Web Map:** _\<not yet created\>_
-
-Only list "ArcGIS Online fundamentals" as a skill once this is actually done.
