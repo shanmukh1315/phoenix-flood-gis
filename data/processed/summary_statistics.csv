@@ -1,0 +1,21 @@
+metric,value
+total_facilities_analyzed,10265.0
+facilities_within_0.5mi_of_sfha,4195.0
+pct_facilities_within_0.5mi_of_sfha,40.87
+category_count::Other / State-Registered Facility,5406.0
+category_count::Hazardous Waste (RCRA),3537.0
+category_count::Water Discharge (NPDES),844.0
+category_count::Water/Air Compliance (ICIS),264.0
+category_count::Air Emissions (EIS),76.0
+category_count::Toxics Release Inventory (TRI),75.0
+category_count::Air Emissions (AIRS/AFS),37.0
+category_count::Superfund / Contaminated Site,14.0
+category_count::Chemical Reporting (Biennial Report),9.0
+category_count::Greenhouse Gas Reporting,3.0
+flood_risk_flag_count::False,6070.0
+flood_risk_flag_count::True,4195.0
+top_category_near_sfha_rank1::Other / State-Registered Facility,2241.0
+top_category_near_sfha_rank2::Hazardous Waste (RCRA),1424.0
+top_category_near_sfha_rank3::Water Discharge (NPDES),315.0
+top_category_near_sfha_rank4::Water/Air Compliance (ICIS),111.0
+top_category_near_sfha_rank5::Toxics Release Inventory (TRI),38.0
