@@ -180,75 +180,70 @@ data.)
   analysis, and I can describe exactly what it does and doesn't account
   for (hydraulics, elevation, substance quantities).
 
-## Manual QGIS Verification Checklist
+## Manual QGIS Verification
 
 The Python pipeline produces all the GIS layers as GeoPackage (`.gpkg`)
-files in `data/processed/`. These steps are **not yet marked complete** --
-this is a checklist to work through in QGIS Desktop after running the
-pipeline, to (a) independently verify the Python analysis and (b) build
-real, hands-on desktop GIS familiarity that backs up this project in an
-interview. Once you've actually done these, update this section to
-past tense (see the note at the end).
+files in `data/processed/`. I independently verified the core spatial
+analysis in QGIS Desktop: I loaded the four processed layers, confirmed
+their CRS, and ran **Select by Location** (`facility_buffers` intersecting
+the FEMA SFHA polygons, filtered to `is_sfha = 'T'`) -- it returned
+**4,195 selected features**, an exact match to the
+`facilities_within_0.5mi_of_sfha` value in
+`data/processed/summary_statistics.csv`. That confirms the Python spatial
+join logic is correct, independently of the code that produced it. The
+QGIS project file is saved at `qgis/phoenix_environmental_flood_risk.qgz`
+and the result is documented in
+`screenshots/qgis_select_by_location.png`.
 
-- [ ] 1. Open QGIS and start a new project.
-- [ ] 2. **Layer > Add Layer > Add Vector Layer**, load in this order:
-      - `data/processed/phoenix_boundary.gpkg`
-      - `data/processed/fema_flood_zones_phoenix.gpkg`
-      - `data/processed/facilities_analyzed.gpkg`
-      - `data/processed/facility_buffers.gpkg`
-- [ ] 3. Right-click each layer > **Properties > Information** and confirm
-      its CRS reads `EPSG:4326 - WGS 84`.
-- [ ] 4. Open the **Attribute Table** for `facilities_analyzed` (right-click
-      > Open Attribute Table) and inspect `intersects_flood_zone`,
-      `flood_zone_type`, and `facility_category`.
-- [ ] 5. Style the layers:
-      - Phoenix boundary: no fill, black outline.
-      - FEMA SFHA zones: **Categorized** symbology on `is_sfha`, blue fill
-        with transparency for `T`, light gray/no fill for `F`.
-      - Facilities: **Categorized** symbology on `intersects_flood_zone`
-        -- red/orange points for `True` (at-risk), green/gray for `False`.
-      - Facility buffers: transparent fill, thin outline only (so they
-        don't visually overwhelm the map).
-- [ ] 6. Run **Vector > Research Tools > Select by Location** to
-      independently verify the Python analysis:
-      - **Select features from:** `facility_buffers`
-      - **Where the features:** intersect
-      - **By comparing to features from:** `fema_flood_zones_phoenix`
-        (filter/limit to `is_sfha = 'T'` first, either with a layer filter
-        or by selecting only SFHA features before running the tool)
-      - Note: this deliberately uses `facility_buffers`, not the raw
-        facility points -- the project's claim is "facilities *within
-        0.5 miles* of an SFHA," not "facilities directly inside one," so
-        the buffer polygons are the correct input layer.
-- [ ] 7. Open the attribute table of the resulting selection, count the
-      unique `registry_id` values, and confirm that count matches the
-      `facilities_within_0.5mi_of_sfha` row in
-      `data/processed/summary_statistics.csv`.
-- [ ] 8. Create a new GeoPackage layer for a small digitizing exercise:
-      `data/processed/digitized_review_areas.gpkg`, geometry type
-      **Polygon**, with fields `review_id` (integer), `source` (text),
-      `notes` (text), `created_by` (text). Turn on an OSM/satellite
-      basemap, and manually digitize 5-10 small "review area" polygons
-      around visible clusters of at-risk facilities near SFHA zones, then
-      save edits. This is basic feature digitizing/attribute-entry
-      practice, not a claim of advanced digitizing or georeferencing work.
-- [ ] 9. Create a print layout (**Project > New Print Layout**) with a
-      title, legend, north arrow, scale bar, and a data source note.
-- [ ] 10. Export the layout as an image or PDF.
-- [ ] 11. Save the QGIS project file as `qgis/phoenix_environmental_flood_risk.qgz`.
-- [ ] 12. Save screenshots into `/screenshots/`:
-      - `qgis_layers.png` -- styled layers/legend in the map canvas
-      - `qgis_attribute_table.png` -- an open attribute table
-      - `qgis_select_by_location.png` -- the Select by Location dialog/result
-      - `qgis_layout_export.png` -- the exported print layout
-      - `qgis_digitizing.png` -- edit mode showing digitized review-area vertices
+The remaining items below are polish/practice, not yet done, and are left
+as an honest checklist rather than claimed as complete:
 
-Once all of the above is actually done, replace this checklist intro with:
-*"I loaded the processed GeoPackage layers into QGIS, inspected attribute
-tables, verified CRS values, styled the FEMA SFHA and facility layers,
-used Select by Location to validate facility buffers intersecting SFHA
-polygons, digitized sample review areas, and exported a print layout."*
--- and only then, since at that point it will be true.
+- [x] 1. Open QGIS and load the four processed layers
+      (`phoenix_boundary`, `fema_flood_zones_phoenix`,
+      `facilities_analyzed`, `facility_buffers`).
+- [x] 2. Confirm each layer's CRS reads `EPSG:4326 - WGS 84`.
+- [x] 3. Run **Select by Location** (`facility_buffers` intersecting
+      `fema_flood_zones_phoenix` filtered to `is_sfha = 'T'`) and confirm
+      the selected count matches `summary_statistics.csv` -- **verified:
+      4,195 = 4,195**.
+- [x] 4. Save the QGIS project file as `qgis/phoenix_environmental_flood_risk.qgz`.
+- [x] 5. Save a screenshot of the verification result as
+      `screenshots/qgis_select_by_location.png`.
+- [ ] 6. Open the **Attribute Table** for `facilities_analyzed` and
+      inspect `intersects_flood_zone`, `flood_zone_type`, and
+      `facility_category`; screenshot as `screenshots/qgis_attribute_table.png`.
+- [ ] 7. Style the layers (categorized symbology on `is_sfha` and
+      `intersects_flood_zone`, transparent buffer outlines) and screenshot
+      as `screenshots/qgis_layers.png`.
+- [ ] 8. Small digitizing exercise: create
+      `data/processed/digitized_review_areas.gpkg` (Polygon, fields
+      `review_id`, `source`, `notes`, `created_by`), digitize 5-10 review
+      areas near flagged facility clusters, screenshot as
+      `screenshots/qgis_digitizing.png`. This would demonstrate basic
+      feature digitizing/attribute entry -- not a claim of advanced
+      digitizing or georeferencing work.
+- [ ] 9. Create a print layout (title, legend, north arrow, scale bar,
+      data source note) and export it as `screenshots/qgis_layout_export.png`.
 
- "georeferencing," unless you've actually georeferenced a
-scanned map. Do not list ArcGIS Pro unless you've actually used ArcGIS Pro.
+Only claim "basic QGIS digitizing" as a skill once step 8 is actually
+done, and never claim "georeferencing" unless a scanned map was actually
+georeferenced. Do not list ArcGIS Pro unless ArcGIS Pro was actually used.
+
+## Optional: ArcGIS Online Web Map
+
+Not yet done. Worth doing since ArcGIS Online is frequently named
+explicitly in GIS Analyst job postings alongside QGIS:
+
+- [ ] 1. Sign in to [ArcGIS Online](https://www.arcgis.com) (a free
+      public account works).
+- [ ] 2. Upload simplified GeoJSON/GeoPackage exports of the Phoenix
+      boundary, FEMA SFHA polygons, and analyzed facilities as hosted
+      feature layers.
+- [ ] 3. Add all layers to a new web map, style facilities by
+      `intersects_flood_zone`, and configure popups to show facility
+      name, category, flood-risk flag, and flood zone type.
+- [ ] 4. Save the web map, screenshot it as
+      `screenshots/arcgis_online_webmap.png`, and add the public map link
+      here: **ArcGIS Online Web Map:** _\<not yet created\>_
+
+Only list "ArcGIS Online fundamentals" as a skill once this is actually done.
